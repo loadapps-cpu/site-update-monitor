@@ -25,16 +25,32 @@ TEST_MODE = True
 
 def get_page_text():
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=True)
+        browser = playwright.chromium.launch(
+            headless=True,
+            args=["--disable-dev-shm-usage"],
+        )
 
         page = browser.new_page()
-        page.goto(URL, wait_until="networkidle", timeout=60_000)
 
-        text = page.locator("body").inner_text()
+        try:
+            print("Перехожу на страницу...")
 
-        browser.close()
-        return text
+            page.goto(
+                URL,
+                wait_until="domcontentloaded",
+                timeout=120_000,
+            )
 
+            # Даём странице время загрузить динамические данные
+            page.wait_for_timeout(10_000)
+
+            text = page.locator("body").inner_text(timeout=30_000)
+
+            print("Страница успешно загружена.")
+            return text
+
+        finally:
+            browser.close()
 
 def extract_update_date(text):
     # Заменяем неразрывные пробелы обычными
